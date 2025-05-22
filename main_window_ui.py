@@ -123,6 +123,7 @@ class Ui_MainWindow(object):
         self.frame_report = QFrame(self.report_page)
         self.frame_report.setObjectName(u"frame_report")
         self.frame_report.setGeometry(QRect(-10, -10, 811, 611))
+        self.frame_report.setStyleSheet(u"background: transparent;")
         self.frame_report.setFrameShape(QFrame.Shape.StyledPanel)
         self.frame_report.setFrameShadow(QFrame.Shadow.Raised)
         self.comboBox_report = QComboBox(self.frame_report)
@@ -205,6 +206,7 @@ class Ui_MainWindow(object):
         self.frame_table = QFrame(self.table_page)
         self.frame_table.setObjectName(u"frame_table")
         self.frame_table.setGeometry(QRect(0, 0, 801, 601))
+        self.frame_table.setStyleSheet(u"background: transparent;")
         self.frame_table.setFrameShape(QFrame.Shape.StyledPanel)
         self.frame_table.setFrameShadow(QFrame.Shadow.Raised)
         self.frame_change_table = QFrame(self.frame_table)
@@ -390,7 +392,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
 
-        self.pages.setCurrentIndex(2)
+        self.pages.setCurrentIndex(1)
 
 
         QMetaObject.connectSlotsByName(MainWindow)

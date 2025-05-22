@@ -29,7 +29,7 @@ class TableModel(QAbstractTableModel):
             if orientation == Qt.Horizontal:
                 return self._headers[section]
             else:
-                return section + 1
+                return str(section + 1)
         return None
 
 class MainWindow(QMainWindow):
@@ -37,6 +37,48 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+
+        # Устанавливаем флаги окна: убрать кнопку максимизации, но оставить закрытие и изменение размера
+        self.setWindowFlags(
+            Qt.Window |
+            Qt.WindowMinimizeButtonHint |
+            Qt.WindowCloseButtonHint |
+            Qt.WindowSystemMenuHint
+        )
+
+        # Очищаем стили у таблиц, чтобы убрать чёрный фон (если был)
+        self.ui.tableView_table.setStyleSheet("")
+        self.ui.tableView_report.setStyleSheet("")
+
+        # Настройка таблиц — выбор и запрет редактирования
+        self.ui.tableView_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.ui.tableView_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.ui.tableView_table.horizontalHeader().setVisible(True)
+        self.ui.tableView_table.verticalHeader().setVisible(True)
+
+        self.ui.tableView_report.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.ui.tableView_report.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.ui.tableView_report.horizontalHeader().setVisible(True)
+        self.ui.tableView_report.verticalHeader().setVisible(True)
+
+        # Стиль для заголовков и углового квадрата с прозрачным тёмным фоном и рамкой
+        header_style = """
+            QHeaderView::section {
+                background-color: rgba(43, 43, 43, 0.7);  /* тёмный с прозрачностью 70% */
+                color: #f0f0f0;                           /* светлый текст */
+                border: 1px solid #555555;                /* серая рамка */
+                padding: 4px;
+                box-sizing: border-box;
+            }
+            QTableCornerButton {
+                background-color: rgba(43, 43, 43, 0.7);
+                border: 1px solid #555555;
+            }
+        """
+        self.ui.tableView_table.horizontalHeader().setStyleSheet(header_style)
+        self.ui.tableView_table.verticalHeader().setStyleSheet(header_style)
+        self.ui.tableView_report.horizontalHeader().setStyleSheet(header_style)
+        self.ui.tableView_report.verticalHeader().setStyleSheet(header_style)
 
         # Подключение к базе данных
         self.conn = db.test_connection()
@@ -50,56 +92,32 @@ class MainWindow(QMainWindow):
                 cur.execute('SET search_path TO курсовая;')
                 self.conn.commit()
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Не удалось установить схему по умолчанию:\n{e}")
+            QMessageBox.critical(self, "Ошибка", f"Не удалось установить схему:\n{e}")
             exit(1)
 
-        # Список таблиц для выбора
+        # Списки таблиц и отчётов
         self.table_names = [
-            "Должности",
-            "Сотрудники",
-            "Клиенты",
-            "Отели",
-            "Перевозчики",
-            "Экскурсии",
-            "Туры",
-            "Экскурсии_Туры",
-            "Договоры_клиенты",
-            "Договоры_партнёры_отели",
-            "Договоры_партнёры_перевозчики",
+            "Должности", "Сотрудники", "Клиенты", "Отели", "Перевозчики",
+            "Экскурсии", "Туры", "Экскурсии_Туры", "Договоры_клиенты",
+            "Договоры_партнёры_отели", "Договоры_партнёры_перевозчики",
             "Договоры_партнёры_экскурсии"
         ]
         self.ui.comboBox_table.clear()
         self.ui.comboBox_table.addItems(self.table_names)
         self.ui.comboBox_table.currentIndexChanged.connect(self.load_table_data)
 
-        # Список отчётов
         self.report_names = [
-            "Все туры с отелем и перевозчиком",
-            "Клиенты с количеством покупок",
-            "Экскурсии для туров",
-            "Договоры с клиентами, турами и сотрудниками",
-            "Сотрудники с должностями и окладами",
-            "Договоры с отелями и сотрудниками",
-            "Договоры с экскурсиями и сотрудниками",
-            "Договоры с перевозчиками и сотрудниками",
-            "Договоры с неоплаченным статусом",
-            "Статистика цен туров по странам",
-            "Отели с питанием и вместимостью",
-            "Количество договоров по сотрудникам",
-            "Клиенты без покупок",
-            "Туры с количеством экскурсий",
-            "Общая выручка по турам"
+            "Все туры с отелем и перевозчиком", "Клиенты с количеством покупок",
+            "Экскурсии для туров", "Договоры с клиентами, турами и сотрудниками",
+            "Сотрудники с должностями и окладами", "Договоры с отелями и сотрудниками",
+            "Договоры с экскурсиями и сотрудниками", "Договоры с перевозчиками и сотрудниками",
+            "Договоры с неоплаченным статусом", "Статистика цен туров по странам",
+            "Отели с питанием и вместимостью", "Количество договоров по сотрудникам",
+            "Клиенты без покупок", "Туры с количеством экскурсий", "Общая выручка по турам"
         ]
         self.ui.comboBox_report.clear()
         self.ui.comboBox_report.addItems(self.report_names)
         self.ui.comboBox_report.currentIndexChanged.connect(self.load_report)
-
-        # Настройка таблиц
-        self.ui.tableView_table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.ui.tableView_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-
-        self.ui.tableView_report.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.ui.tableView_report.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
         # Навигация по страницам
         self.ui.btn_Clients.clicked.connect(self.show_report_page)
@@ -112,11 +130,9 @@ class MainWindow(QMainWindow):
         self.ui.btn_change.clicked.connect(self.edit_record)
         self.ui.btn_delete.clicked.connect(self.delete_record)
 
-        # Установить выбранную таблицу по умолчанию и загрузить её данные
+        # Загрузка данных при старте
         self.ui.comboBox_table.setCurrentIndex(0)
         self.load_table_data(0)
-
-        # Установить выбранный отчёт по умолчанию и загрузить его
         self.ui.comboBox_report.setCurrentIndex(0)
         self.load_report(0)
 
@@ -136,24 +152,17 @@ class MainWindow(QMainWindow):
     def load_table_data(self, index):
         if index < 0 or index >= len(self.table_names):
             return
-
         table_name = self.table_names[index]
         try:
             with self.conn.cursor() as cur:
                 cur.execute(f'SELECT * FROM "{table_name}";')
                 data = cur.fetchall()
                 headers = [desc[0] for desc in cur.description]
-
-            if not data:
-                # Если таблица пуста, показываем пустую модель с заголовками
-                model = TableModel([], headers)
-                self.ui.tableView_table.setModel(model)
-                return
-
             model = TableModel(data, headers)
             self.ui.tableView_table.setModel(model)
+            self.ui.tableView_table.resizeColumnsToContents()
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Ошибка при загрузке таблицы:\n{e}")
+            QMessageBox.critical(self, "Ошибка", f"Ошибка загрузки таблицы:\n{e}")
 
     def load_report(self, index):
         report_functions = [
@@ -173,10 +182,8 @@ class MainWindow(QMainWindow):
             reports.get_tours_with_excursion_counts,
             reports.get_total_revenue_per_tour,
         ]
-
         if index < 0 or index >= len(report_functions):
             return
-
         func = report_functions[index]
         try:
             data = func(self.conn)
@@ -184,7 +191,6 @@ class MainWindow(QMainWindow):
                 QMessageBox.information(self, "Отчёт", "Данные отсутствуют.")
                 self.ui.tableView_report.setModel(None)
                 return
-
             headers_map = {
                 0: ["ID тура", "Страна", "Город", "Продолжительность", "Цена", "Отель", "Перевозчик"],
                 1: ["ФИО", "Телефон", "Количество покупок"],
@@ -202,20 +208,17 @@ class MainWindow(QMainWindow):
                 13: ["ID тура", "Страна", "Город", "Количество экскурсий"],
                 14: ["ID тура", "Страна", "Город", "Цена тура", "Цена перевозчика", "Цена отеля", "Сумма экскурсий", "Общая выручка"],
             }
-
             headers = headers_map.get(index, [])
-
             model = TableModel(data, headers)
             self.ui.tableView_report.setModel(model)
-
+            self.ui.tableView_report.resizeColumnsToContents()
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Ошибка при загрузке отчёта:\n{e}")
+            QMessageBox.critical(self, "Ошибка", f"Ошибка загрузки отчёта:\n{e}")
 
     def add_record(self):
         table_index = self.ui.comboBox_table.currentIndex()
         table = self.table_names[table_index]
         model = self.ui.tableView_table.model()
-
         if model and hasattr(model, '_headers') and model._headers:
             headers = model._headers
         else:
@@ -223,7 +226,6 @@ class MainWindow(QMainWindow):
             if not headers:
                 QMessageBox.warning(self, "Ошибка", "Не удалось получить структуру таблицы для добавления.")
                 return
-
         dialog = AddEditDialog(self.conn, table, headers)
         if dialog.exec() == QDialog.Accepted:
             self.load_table_data(table_index)
@@ -248,18 +250,14 @@ class MainWindow(QMainWindow):
         if not selection_model.hasSelection():
             QMessageBox.warning(self, "Удалить", "Выберите запись для удаления.")
             return
-
         selected_indexes = selection_model.selectedRows()
         if not selected_indexes:
             QMessageBox.warning(self, "Удалить", "Выберите запись для удаления.")
             return
-
         row = selected_indexes[0].row()
         model = self.ui.tableView_table.model()
-        id_value = model._data[row][0]  # Предполагается, что первый столбец — PK
-
+        id_value = model._data[row][0]  # предполагается, что первый столбец — PK
         table_name = self.table_names[self.ui.comboBox_table.currentIndex()]
-
         reply = QMessageBox.question(
             self, "Удалить",
             f"Вы уверены, что хотите удалить запись с ID = {id_value} из таблицы {table_name}?",

@@ -170,7 +170,7 @@ def get_tour_price_stats_by_country(conn):
     query = """
     SELECT 
         страна, 
-        AVG(цена) AS средняя_цена,
+        ROUND(AVG(цена)::numeric, 2) AS средняя_цена,
         MIN(цена) as минимальная_цена,
         MAX(цена) as максимальная_цена
     FROM Туры
