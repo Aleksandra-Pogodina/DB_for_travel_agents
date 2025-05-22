@@ -1,0 +1,678 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="cursor">
+   <cursorShape>ArrowCursor</cursorShape>
+  </property>
+  <property name="windowTitle">
+   <string>Туристическое агентство</string>
+  </property>
+  <property name="autoFillBackground">
+   <bool>false</bool>
+  </property>
+  <property name="styleSheet">
+   <string notr="true"> background: qlineargradient(
+        x1: 0, y1: 0,       /* верхний левый угол */
+        x2: 1, y2: 1,       /* нижний правый угол */
+        stop: 0 #1e3c72,    /* насыщенный синий */
+        stop: 0.5 #2a5298,  /* бирюзовый */
+        stop: 1 #1abc9c     /* зелёный, ассоциирующийся с природой */
+    );
+    color: white;           /* цвет текста для контраста */
+    font-family: &quot;Segoe UI&quot;, Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 14pt;
+
+</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QStackedWidget" name="pages">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>801</width>
+      <height>611</height>
+     </rect>
+    </property>
+    <property name="currentIndex">
+     <number>2</number>
+    </property>
+    <widget class="QWidget" name="mainpage">
+     <widget class="QFrame" name="main_buttons">
+      <property name="geometry">
+       <rect>
+        <x>270</x>
+        <y>180</y>
+        <width>271</width>
+        <height>201</height>
+       </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: rgba(0, 0, 0, 0.6);           /* затемнённый полупрозрачный фон */
+    border: 1px solid rgba(255, 255, 255, 0.8);     /* тонкая, но чёткая рамка */
+    border-radius: 12px;
+    padding: 15px;</string>
+      </property>
+      <layout class="QVBoxLayout" name="buttonContainer">
+       <item>
+        <widget class="QPushButton" name="btn_Tours">
+         <property name="styleSheet">
+          <string notr="true">QPushButton {
+    background-color: #3498db;       /* насыщенный синий */
+    color: white;                    /* белый текст */
+    border: none;
+    border-radius: 8px;              /* скруглённые углы */
+    padding: 10px 20px;              /* внутренние отступы */
+    font-size: 16px;
+    font-weight: 600;
+    min-width: 120px;
+    transition: background-color 0.3s ease;
+}
+
+QPushButton:hover {
+    background-color: #2980b9;       /* чуть темнее при наведении */
+}
+
+QPushButton:pressed {
+    background-color: #1c5980;       /* ещё темнее при нажатии */
+}
+</string>
+         </property>
+         <property name="text">
+          <string>Таблицы</string>
+         </property>
+         <property name="icon">
+          <iconset resource="resourse.qrc">
+           <normaloff>:/icons/icons/view_list_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg</normaloff>:/icons/icons/view_list_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg</iconset>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>30</width>
+           <height>30</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_Clients">
+         <property name="styleSheet">
+          <string notr="true">QPushButton {
+    background-color: #3498db;       /* насыщенный синий */
+    color: white;                    /* белый текст */
+    border: none;
+    border-radius: 8px;              /* скруглённые углы */
+    padding: 10px 20px;              /* внутренние отступы */
+    font-size: 16px;
+    font-weight: 600;
+    min-width: 120px;
+    transition: background-color 0.3s ease;
+}
+
+QPushButton:hover {
+    background-color: #2980b9;       /* чуть темнее при наведении */
+}
+
+QPushButton:pressed {
+    background-color: #1c5980;       /* ещё темнее при нажатии */
+}
+</string>
+         </property>
+         <property name="text">
+          <string>Отчёты</string>
+         </property>
+         <property name="icon">
+          <iconset resource="resourse.qrc">
+           <normaloff>:/icons/icons/description_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg</normaloff>:/icons/icons/description_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg</iconset>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>30</width>
+           <height>30</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="report_page">
+     <widget class="QFrame" name="frame_report">
+      <property name="geometry">
+       <rect>
+        <x>-10</x>
+        <y>-10</y>
+        <width>811</width>
+        <height>611</height>
+       </rect>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::Shape::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Shadow::Raised</enum>
+      </property>
+      <widget class="QComboBox" name="comboBox_report">
+       <property name="geometry">
+        <rect>
+         <x>40</x>
+         <y>110</y>
+         <width>631</width>
+         <height>51</height>
+        </rect>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgba(0, 0, 0, 0.6);           /* затемнённый полупрозрачный фон */
+    border: 1px solid rgba(255, 255, 255, 0.8);     /* тонкая, но чёткая рамка */
+    border-radius: 12px;
+    padding: 15px;</string>
+       </property>
+       <item>
+        <property name="text">
+         <string>Список всех туров с информацией об отеле и перевозчике</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Список клиентов с количеством покупок</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Список экскурсий для туров</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Список договоров с информацией о клиенте, туре и сотруднике</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Список сотрудников с указанием их должностей и окладов</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Список договоров с информацией об отеле и сотруднике</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Список договоров с информацией об экскурсии и сотруднике</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Список договоров с информацией об перевозчике и сотруднике</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Список договоров, по которым оплата ещё не произведена</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Средняя, минимальная, максимальная цены туров по каждой стране</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Список отелей с питанием и их вместимостью</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Количество договоров, заключённых каждым сотрудником</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Список клиентов, которые не совершали покупок</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Список туров с количеством экскурсий в каждом</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Общая выручка по каждому туру (цена тура + стоимость перевозки + стоимость проживания + стоимость экскурсий)</string>
+        </property>
+       </item>
+      </widget>
+      <widget class="QLabel" name="label_report">
+       <property name="geometry">
+        <rect>
+         <x>170</x>
+         <y>0</y>
+         <width>441</width>
+         <height>71</height>
+        </rect>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background: transparent;
+    color: #ffffff;
+    font-size: 22px;
+    font-weight: bold;
+    border: none;
+    qproperty-alignment: 'AlignCenter';   /* Центрирование текста */
+    letter-spacing: 1px;
+    padding: 12px 0;
+    text-shadow: 1px 1px 6px #185a9d;     /* Лёгкая тень для выразительности */</string>
+       </property>
+       <property name="text">
+        <string>Выберите отчёт</string>
+       </property>
+      </widget>
+      <widget class="QTableView" name="tableView_report">
+       <property name="geometry">
+        <rect>
+         <x>30</x>
+         <y>190</y>
+         <width>771</width>
+         <height>401</height>
+        </rect>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgba(0, 0, 0, 0.6);           /* затемнённый полупрозрачный фон */
+    border: 1px solid rgba(255, 255, 255, 0.8);     /* тонкая, но чёткая рамка */
+    border-radius: 12px;
+    padding: 15px;</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="btn_back_on_report">
+       <property name="geometry">
+        <rect>
+         <x>30</x>
+         <y>20</y>
+         <width>111</width>
+         <height>41</height>
+        </rect>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton {
+    background-color: #245a8d;       /* тёмно-синий фон */
+    color: #e0e0e0;                  /* светло-серый текст */
+    border: 2px solid #bfbfbf;       /* светло-серая (почти белая) рамка */
+    border-radius: 8px;
+    padding: 6px 12px;               /* уменьшенные отступы для компактности */
+    font-size: 16px;                 /* уменьшенный размер шрифта */
+    font-weight: 600;
+    min-width: 80px;                 /* уменьшенная минимальная ширина */
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+QPushButton:hover {
+    background-color: #1f4f7a;       /* ещё темнее при наведении */
+    border: 2px solid #a0a0a0;       /* чуть темнее рамка */
+    color: #f0f0f0;
+}
+
+QPushButton:pressed {
+    background-color: #173d5a;       /* самый тёмный фон при нажатии */
+    border: 2px solid #808080;       /* более тёмная рамка */
+    color: #dcdcdc;
+}
+
+</string>
+       </property>
+       <property name="text">
+        <string>назад</string>
+       </property>
+       <property name="icon">
+        <iconset resource="resourse.qrc">
+         <normaloff>:/icons/icons/arrow_back_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg</normaloff>:/icons/icons/arrow_back_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg</iconset>
+       </property>
+      </widget>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="table_page">
+     <widget class="QFrame" name="frame_table">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>801</width>
+        <height>601</height>
+       </rect>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::Shape::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Shadow::Raised</enum>
+      </property>
+      <widget class="QFrame" name="frame_change_table">
+       <property name="geometry">
+        <rect>
+         <x>80</x>
+         <y>500</y>
+         <width>621</width>
+         <height>91</height>
+        </rect>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgba(0, 0, 0, 0.6);           /* затемнённый полупрозрачный фон */
+    border: 1px solid rgba(255, 255, 255, 0.8);     /* тонкая, но чёткая рамка */
+    border-radius: 12px;
+    padding: 15px;</string>
+       </property>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <widget class="QPushButton" name="btn_add">
+          <property name="styleSheet">
+           <string notr="true">QPushButton {
+    background-color: #3498db;       /* насыщенный синий */
+    color: white;                    /* белый текст */
+    border: 2px solid white;         /* белый край */
+    border-radius: 8px;              /* скруглённые углы */
+    padding: 10px 20px;              /* внутренние отступы */
+    font-size: 16px;
+    font-weight: 600;
+    min-width: 120px;
+    transition: background-color 0.3s ease;
+}
+
+QPushButton:hover {
+    background-color: #2980b9;       /* чуть темнее при наведении */
+    border: 2px solid white;         /* белый край при наведении */
+}
+
+QPushButton:pressed {
+    background-color: #1c5980;       /* ещё темнее при нажатии */
+    border: 2px solid white;         /* белый край при нажатии */
+}
+</string>
+          </property>
+          <property name="text">
+           <string>Добавить</string>
+          </property>
+          <property name="icon">
+           <iconset resource="resourse.qrc">
+            <normaloff>:/icons/icons/add_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg</normaloff>:/icons/icons/add_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>25</width>
+            <height>25</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btn_change">
+          <property name="styleSheet">
+           <string notr="true">QPushButton {
+    background-color: #3498db;       /* насыщенный синий */
+    color: white;                    /* белый текст */
+    border: 2px solid white;         /* белый край */
+    border-radius: 8px;              /* скруглённые углы */
+    padding: 10px 20px;              /* внутренние отступы */
+    font-size: 16px;
+    font-weight: 600;
+    min-width: 120px;
+    transition: background-color 0.3s ease;
+}
+
+QPushButton:hover {
+    background-color: #2980b9;       /* чуть темнее при наведении */
+    border: 2px solid white;         /* белый край при наведении */
+}
+
+QPushButton:pressed {
+    background-color: #1c5980;       /* ещё темнее при нажатии */
+    border: 2px solid white;         /* белый край при нажатии */
+}
+</string>
+          </property>
+          <property name="text">
+           <string>Изменить</string>
+          </property>
+          <property name="icon">
+           <iconset resource="resourse.qrc">
+            <normaloff>:/icons/icons/edit_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg</normaloff>:/icons/icons/edit_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>20</width>
+            <height>20</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btn_delete">
+          <property name="styleSheet">
+           <string notr="true">QPushButton {
+    background-color: #3498db;       /* насыщенный синий */
+    color: white;                    /* белый текст */
+    border: 2px solid white;         /* белый край */
+    border-radius: 8px;              /* скруглённые углы */
+    padding: 10px 20px;              /* внутренние отступы */
+    font-size: 16px;
+    font-weight: 600;
+    min-width: 120px;
+    transition: background-color 0.3s ease;
+}
+
+QPushButton:hover {
+    background-color: #2980b9;       /* чуть темнее при наведении */
+    border: 2px solid white;         /* белый край при наведении */
+}
+
+QPushButton:pressed {
+    background-color: #1c5980;       /* ещё темнее при нажатии */
+    border: 2px solid white;         /* белый край при нажатии */
+}
+</string>
+          </property>
+          <property name="text">
+           <string>Удалить</string>
+          </property>
+          <property name="icon">
+           <iconset resource="resourse.qrc">
+            <normaloff>:/icons/icons/delete_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg</normaloff>:/icons/icons/delete_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>20</width>
+            <height>20</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QTableView" name="tableView_table">
+       <property name="geometry">
+        <rect>
+         <x>30</x>
+         <y>190</y>
+         <width>751</width>
+         <height>301</height>
+        </rect>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgba(0, 0, 0, 0.6);           /* затемнённый полупрозрачный фон */
+    border: 1px solid rgba(255, 255, 255, 0.8);     /* тонкая, но чёткая рамка */
+    border-radius: 12px;
+    padding: 15px;</string>
+       </property>
+      </widget>
+      <widget class="QComboBox" name="comboBox_table">
+       <property name="geometry">
+        <rect>
+         <x>40</x>
+         <y>100</y>
+         <width>381</width>
+         <height>60</height>
+        </rect>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgba(0, 0, 0, 0.6);           /* затемнённый полупрозрачный фон */
+    border: 1px solid rgba(255, 255, 255, 0.8);     /* тонкая, но чёткая рамка */
+    border-radius: 12px;
+    padding: 15px;</string>
+       </property>
+       <item>
+        <property name="text">
+         <string>Туры</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Отели</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Экскурсии</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Экскурсии_туры</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Перевозчики</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Клиенты</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Договоры_клиенты</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Сотрудники</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Должности</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Договоры_партнёры_отели</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Договоры_партнёры_экскурсии</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Договоры_партнёры_перевозчики</string>
+        </property>
+       </item>
+      </widget>
+      <widget class="QLabel" name="label_table">
+       <property name="geometry">
+        <rect>
+         <x>130</x>
+         <y>0</y>
+         <width>511</width>
+         <height>58</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <family>Segoe UI</family>
+         <pointsize>-1</pointsize>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background: transparent;
+    color: #ffffff;
+    font-size: 22px;
+    font-weight: bold;
+    border: none;
+    qproperty-alignment: 'AlignCenter';   /* Центрирование текста */
+    letter-spacing: 1px;
+    padding: 12px 0;
+    text-shadow: 1px 1px 6px #185a9d;     /* Лёгкая тень для выразительности */</string>
+       </property>
+       <property name="text">
+        <string>Выберите таблицу</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="btn_back_on_table">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>10</y>
+         <width>108</width>
+         <height>41</height>
+        </rect>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton {
+    background-color: #245a8d;       /* тёмно-синий фон */
+    color: #e0e0e0;                  /* светло-серый текст */
+    border: 2px solid #bfbfbf;       /* светло-серая (почти белая) рамка */
+    border-radius: 8px;
+    padding: 6px 12px;               /* уменьшенные отступы для компактности */
+    font-size: 16px;                 /* уменьшенный размер шрифта */
+    font-weight: 600;
+    min-width: 80px;                 /* уменьшенная минимальная ширина */
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+QPushButton:hover {
+    background-color: #1f4f7a;       /* ещё темнее при наведении */
+    border: 2px solid #a0a0a0;       /* чуть темнее рамка */
+    color: #f0f0f0;
+}
+
+QPushButton:pressed {
+    background-color: #173d5a;       /* самый тёмный фон при нажатии */
+    border: 2px solid #808080;       /* более тёмная рамка */
+    color: #dcdcdc;
+}
+</string>
+       </property>
+       <property name="text">
+        <string>назад</string>
+       </property>
+       <property name="icon">
+        <iconset resource="resourse.qrc">
+         <normaloff>:/icons/icons/arrow_back_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg</normaloff>:/icons/icons/arrow_back_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg</iconset>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>16</width>
+         <height>16</height>
+        </size>
+       </property>
+      </widget>
+     </widget>
+    </widget>
+   </widget>
+  </widget>
+ </widget>
+ <resources>
+  <include location="resourse.qrc"/>
+ </resources>
+ <connections/>
+</ui>
