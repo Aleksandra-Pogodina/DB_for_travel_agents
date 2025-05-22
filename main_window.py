@@ -6,6 +6,7 @@ from main_window_ui import Ui_MainWindow
 import db
 import reports
 from dialogs.add_edit_dialog import AddEditDialog  # Универсальный диалог
+from PySide6.QtCore import Qt
 
 class TableModel(QAbstractTableModel):
     def __init__(self, data, headers):
@@ -31,6 +32,7 @@ class TableModel(QAbstractTableModel):
             else:
                 return str(section + 1)
         return None
+
 
 class MainWindow(QMainWindow):
     def __init__(self):

@@ -15,6 +15,16 @@ class AddEditDialog(QDialog):
 
         self.fields = {}
 
+        # Загрузим данные отелей с городом и страной для автозаполнения
+        self.hotels_data = {}
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute('SELECT id_отеля, город, страна FROM Отели')
+                for id_val, city, country in cur.fetchall():
+                    self.hotels_data[id_val] = {"город": city, "страна": country}
+        except Exception as e:
+            QMessageBox.warning(self, "Внимание", f"Не удалось загрузить данные отелей для автозаполнения:\n{e}")
+
         # Словарь внешних ключей: поле -> (таблица, id_столбец, отображаемый_столбец)
         foreign_keys = {
             "id_отеля": ("Отели", "id_отеля", "название"),
@@ -22,125 +32,95 @@ class AddEditDialog(QDialog):
             "id_перевозчика": ("Перевозчики", "id_перевозчика", "название"),
             "id_сотрудника": ("Сотрудники", "id_сотрудника", "фио"),
             "id_клиента": ("Клиенты", "id_клиента", "фио"),
-            "id_тура": ("Туры", "id_тура", "страна"),
         }
 
-        # Для хранения данных отелей для проверки и автозаполнения
-        self.hotels_data = {}
-
         for i, header in enumerate(headers):
-            if i == 0:
-                continue  # Пропускаем первичный ключ
+            if i == 0 and self.table_name != "Экскурсии_Туры":
+                continue  # Пропускаем первичный ключ для всех таблиц, кроме Экскурсии_Туры
 
             lname = header.lower()
 
-            # Внешние ключи с QComboBox
+            # Особая обработка для таблицы Экскурсии_Туры
+            if self.table_name == "Экскурсии_Туры":
+                if header == "id_тура":
+                    combo = QComboBox(self)
+                    with self.conn.cursor() as cur:
+                        cur.execute('SELECT id_тура, страна, город FROM Туры ORDER BY страна, город')
+                        tours = cur.fetchall()
+                    for id_val, country, city in tours:
+                        combo.addItem(f"{id_val} — {country}, {city}", id_val)
+                    if record:
+                        current_id = record[i]
+                        index = combo.findData(current_id)
+                        if index >= 0:
+                            combo.setCurrentIndex(index)
+                    self.ui.formLayout_dialog.addRow("id_тура", combo)
+                    self.fields["id_тура"] = combo
+                    continue
+
+                if header == "id_экскурсии":
+                    combo = QComboBox(self)
+                    with self.conn.cursor() as cur:
+                        cur.execute('SELECT id_экскурсии, название FROM Экскурсии ORDER BY название')
+                        excursions = cur.fetchall()
+                    for id_val, name in excursions:
+                        combo.addItem(name, id_val)
+                    if record:
+                        current_id = record[i]
+                        index = combo.findData(current_id)
+                        if index >= 0:
+                            combo.setCurrentIndex(index)
+                    self.ui.formLayout_dialog.addRow("id_экскурсии", combo)
+                    self.fields["id_экскурсии"] = combo
+                    continue
+
+            # Внешние ключи для остальных таблиц
             if header in foreign_keys:
                 table, id_col, display_col = foreign_keys[header]
                 combo = QComboBox(self)
-                try:
-                    with self.conn.cursor() as cur:
-                        cur.execute(f'SELECT "{id_col}", "{display_col}" FROM "{table}" ORDER BY "{display_col}"')
-                        items = cur.fetchall()
-                    for id_val, display_val in items:
-                        combo.addItem(str(display_val), id_val)
-                        if header == "id_отеля":
-                            with self.conn.cursor() as cur2:
-                                cur2.execute(f'SELECT город, страна FROM Отели WHERE id_отеля = %s', (id_val,))
-                                res = cur2.fetchone()
-                                if res:
-                                    self.hotels_data[id_val] = {"город": res[0], "страна": res[1]}
-                except Exception as e:
-                    QMessageBox.warning(self, "Ошибка", f"Не удалось загрузить данные для {header}:\n{e}")
-
+                with self.conn.cursor() as cur:
+                    cur.execute(f'SELECT "{id_col}", "{display_col}" FROM "{table}" ORDER BY "{display_col}"')
+                    items = cur.fetchall()
+                for id_val, display_val in items:
+                    combo.addItem(str(display_val), id_val)
                 if record:
                     current_id = record[i]
                     index = combo.findData(current_id)
                     if index >= 0:
                         combo.setCurrentIndex(index)
-
                 self.ui.formLayout_dialog.addRow(header, combo)
                 self.fields[header] = combo
 
+                # Если поле id_отеля — подключаем автозаполнение города и страны
                 if header == "id_отеля":
                     combo.currentIndexChanged.connect(self.on_hotel_changed)
-
                 continue
 
-            # Пол — QComboBox с дефолтным значением "М"
-            if lname in ["пол", "gender", "sex"]:
-                combo = QComboBox(self)
-                combo.addItems(["М", "Ж"])
-                if record:
-                    value = str(record[i]) if record[i] is not None else ""
-                    if value in ["М", "Ж"]:
-                        combo.setCurrentText(value)
-                    else:
-                        combo.setCurrentIndex(0)
-                else:
-                    combo.setCurrentIndex(0)
-                self.ui.formLayout_dialog.addRow(header, combo)
-                self.fields[header] = combo
-                continue
-
-            # Питание — QComboBox с двумя вариантами True/False
-            if lname in ["питание", "meal", "питание_в_отеле"]:
-                combo = QComboBox(self)
-                combo.addItems(["True", "False"])
-                if record:
-                    value = str(record[i]) if record[i] is not None else ""
-                    if value in combo.model().stringList():
-                        combo.setCurrentText(value)
-                    else:
-                        combo.setCurrentIndex(0)
-                else:
-                    combo.setCurrentIndex(0)
-                self.ui.formLayout_dialog.addRow(header, combo)
-                self.fields[header] = combo
-                continue
-
+            # Валидаторы для других полей
+            validator, placeholder = self.get_validator_and_placeholder(lname)
             line_edit = QLineEdit(self)
-
-            if "дата" in lname or "date" in lname:
-                date_regex = QRegularExpression(r"\d{2} \d{2} \d{4}")
-                date_validator = QRegularExpressionValidator(date_regex)
-                line_edit.setValidator(date_validator)
-                line_edit.setPlaceholderText("ДД ММ ГГГГ (например, 31 12 2023)")
-
-            elif "телефон" in lname or "phone" in lname:
-                line_edit.setInputMask("+7 (000) 000-00-00")
-
-            elif "паспорт" in lname:
-                passport_regex = QRegularExpression(r"\d{4} \d{6}")
-                passport_validator = QRegularExpressionValidator(passport_regex)
-                line_edit.setValidator(passport_validator)
-                line_edit.setPlaceholderText("1234 567890")
-
-            elif "инн" in lname:
-                inn_regex = QRegularExpression(r"\d{12}")
-                inn_validator = QRegularExpressionValidator(inn_regex)
-                line_edit.setValidator(inn_validator)
-                line_edit.setPlaceholderText("12 цифр, например 123456789012")
-
+            if validator:
+                line_edit.setValidator(validator)
+            if placeholder:
+                line_edit.setPlaceholderText(placeholder)
             if record:
                 value = str(record[i]) if record[i] is not None else ""
                 line_edit.setText(value)
-
             self.ui.formLayout_dialog.addRow(header, line_edit)
             self.fields[header] = line_edit
 
-        # Сохраняем ссылки на поля города и страны для таблицы Туры
+        # Сохраняем ссылки на поля город и страна, если они есть
         self.city_field = self.fields.get("город")
         self.country_field = self.fields.get("страна")
 
-        self.ui.btn_save.clicked.connect(self.save_data)
-        self.ui.btn_cancel.clicked.connect(self.reject)
-
-        # При инициализации, если редактируем и есть отель, подставляем город и страну
+        # Если редактируем тур и уже выбран отель — сразу автозаполняем
         if self.table_name == "Туры" and record and "id_отеля" in self.fields:
             hotel_combo = self.fields["id_отеля"]
             current_id = hotel_combo.currentData()
             self.fill_city_country(current_id)
+
+        self.ui.btn_save.clicked.connect(self.save_data)
+        self.ui.btn_cancel.clicked.connect(self.reject)
 
     def on_hotel_changed(self, index):
         combo = self.fields.get("id_отеля")
@@ -155,24 +135,36 @@ class AddEditDialog(QDialog):
             city = hotel_info.get("город", "")
             country = hotel_info.get("страна", "")
             if self.city_field and self.country_field:
-                # Берём текущие значения для города и страны
                 current_city = self.city_field.text()
                 current_country = self.country_field.text()
-                # Если они отличаются от данных отеля, заменяем на данные отеля
                 if current_city != city or current_country != country:
                     self.city_field.setText(city)
                     self.country_field.setText(country)
 
+    def get_validator_and_placeholder(self, lname):
+        if "дата" in lname or "date" in lname:
+            regex = QRegularExpression(r"\d{2} \d{2} \d{4}")
+            return QRegularExpressionValidator(regex), "ДД ММ ГГГГ (например, 31 12 2023)"
+        elif "телефон" in lname or "phone" in lname:
+            return None, "+7 (___) ___-__-__"
+        elif "паспорт" in lname:
+            regex = QRegularExpression(r"\d{4} \d{6}")
+            return QRegularExpressionValidator(regex), "1234 567890"
+        elif "инн" in lname:
+            regex = QRegularExpression(r"\d{12}")
+            return QRegularExpressionValidator(regex), "12 цифр, например 123456789012"
+        else:
+            return None, None
+
     def save_data(self):
         try:
             with self.conn.cursor() as cur:
-                # Перед сохранением для таблицы Туры проверяем город и страну
+                # Автозаполнение города и страны перед сохранением (если тур)
                 if self.table_name == "Туры" and "id_отеля" in self.fields:
                     hotel_id = self.fields["id_отеля"].currentData()
                     if hotel_id in self.hotels_data:
                         hotel_city = self.hotels_data[hotel_id]["город"]
                         hotel_country = self.hotels_data[hotel_id]["страна"]
-                        # Принудительно подставляем город и страну из отеля
                         if "город" in self.fields:
                             self.fields["город"].setText(hotel_city)
                         if "страна" in self.fields:
@@ -185,11 +177,7 @@ class AddEditDialog(QDialog):
                     for h in self.fields:
                         widget = self.fields[h]
                         if isinstance(widget, QComboBox):
-                            val = widget.currentText()
-                            if not val and (h.lower() in ["пол", "gender", "sex"]):
-                                val = "М"
-                            if h in ["id_отеля", "id_должности", "id_перевозчика", "id_сотрудника", "id_клиента", "id_тура"]:
-                                val = widget.currentData()
+                            val = widget.currentData()
                             values.append(val)
                         else:
                             values.append(widget.text())
@@ -203,11 +191,7 @@ class AddEditDialog(QDialog):
                     for h in self.fields:
                         widget = self.fields[h]
                         if isinstance(widget, QComboBox):
-                            val = widget.currentText()
-                            if not val and (h.lower() in ["пол", "gender", "sex"]):
-                                val = "М"
-                            if h in ["id_отеля", "id_должности", "id_перевозчика", "id_сотрудника", "id_клиента", "id_тура"]:
-                                val = widget.currentData()
+                            val = widget.currentData()
                             values.append(val)
                         else:
                             values.append(widget.text())
