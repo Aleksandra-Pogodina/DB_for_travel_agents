@@ -15,22 +15,22 @@ class AddEditDialog(QDialog):
 
         self.fields = {}
 
-        # Словарь для внешних ключей: поле -> (таблица, id_столбец, отображаемый_столбец)
+        # Словарь внешних ключей: поле -> (таблица, id_столбец, отображаемый_столбец)
         foreign_keys = {
             "id_отеля": ("Отели", "id_отеля", "название"),
-            "id_должности": ("Должности", "id_должности", "название_должности"),  # Изменено название столбца
+            "id_должности": ("Должности", "id_должности", "название_должности"),
             "id_перевозчика": ("Перевозчики", "id_перевозчика", "название"),
             "id_сотрудника": ("Сотрудники", "id_сотрудника", "фио"),
             "id_клиента": ("Клиенты", "id_клиента", "фио"),
             "id_тура": ("Туры", "id_тура", "страна"),
         }
 
-        # Для хранения данных отелей для автозаполнения города и страны
+        # Для хранения данных отелей для проверки и автозаполнения
         self.hotels_data = {}
 
         for i, header in enumerate(headers):
             if i == 0:
-                continue  # пропускаем PK
+                continue  # Пропускаем первичный ключ
 
             lname = header.lower()
 
@@ -65,23 +65,6 @@ class AddEditDialog(QDialog):
                 if header == "id_отеля":
                     combo.currentIndexChanged.connect(self.on_hotel_changed)
 
-                continue
-
-            # Для таблицы Перевозчики добавляем поле выбора типа перевозчика
-            if self.table_name == "Перевозчики" and lname == "тип":
-                combo = QComboBox(self)
-                transport_types = ["самолёт", "поезд", "паром", "автобус"]
-                combo.addItems(transport_types)
-                if record:
-                    value = str(record[i]) if record[i] is not None else ""
-                    if value in transport_types:
-                        combo.setCurrentText(value)
-                    else:
-                        combo.setCurrentIndex(0)
-                else:
-                    combo.setCurrentIndex(0)
-                self.ui.formLayout_dialog.addRow(header, combo)
-                self.fields[header] = combo
                 continue
 
             # Пол — QComboBox с дефолтным значением "М"
@@ -146,13 +129,15 @@ class AddEditDialog(QDialog):
             self.ui.formLayout_dialog.addRow(header, line_edit)
             self.fields[header] = line_edit
 
+        # Сохраняем ссылки на поля города и страны для таблицы Туры
         self.city_field = self.fields.get("город")
         self.country_field = self.fields.get("страна")
 
         self.ui.btn_save.clicked.connect(self.save_data)
         self.ui.btn_cancel.clicked.connect(self.reject)
 
-        if record and "id_отеля" in self.fields:
+        # При инициализации, если редактируем и есть отель, подставляем город и страну
+        if self.table_name == "Туры" and record and "id_отеля" in self.fields:
             hotel_combo = self.fields["id_отеля"]
             current_id = hotel_combo.currentData()
             self.fill_city_country(current_id)
@@ -161,25 +146,38 @@ class AddEditDialog(QDialog):
         combo = self.fields.get("id_отеля")
         if combo:
             hotel_id = combo.itemData(index)
-            self.fill_city_country(hotel_id)
+            if self.table_name == "Туры":
+                self.fill_city_country(hotel_id)
 
     def fill_city_country(self, hotel_id):
         if hotel_id in self.hotels_data:
             hotel_info = self.hotels_data[hotel_id]
             city = hotel_info.get("город", "")
             country = hotel_info.get("страна", "")
-            if self.city_field:
+            if self.city_field and self.country_field:
+                # Берём текущие значения для города и страны
                 current_city = self.city_field.text()
-                if not current_city or current_city != city:
-                    self.city_field.setText(city)
-            if self.country_field:
                 current_country = self.country_field.text()
-                if not current_country or current_country != country:
+                # Если они отличаются от данных отеля, заменяем на данные отеля
+                if current_city != city or current_country != country:
+                    self.city_field.setText(city)
                     self.country_field.setText(country)
 
     def save_data(self):
         try:
             with self.conn.cursor() as cur:
+                # Перед сохранением для таблицы Туры проверяем город и страну
+                if self.table_name == "Туры" and "id_отеля" in self.fields:
+                    hotel_id = self.fields["id_отеля"].currentData()
+                    if hotel_id in self.hotels_data:
+                        hotel_city = self.hotels_data[hotel_id]["город"]
+                        hotel_country = self.hotels_data[hotel_id]["страна"]
+                        # Принудительно подставляем город и страну из отеля
+                        if "город" in self.fields:
+                            self.fields["город"].setText(hotel_city)
+                        if "страна" in self.fields:
+                            self.fields["страна"].setText(hotel_country)
+
                 if self.record:
                     set_clause = ", ".join([f'"{h}" = %s' for h in self.fields.keys()])
                     query = f'UPDATE "{self.table_name}" SET {set_clause} WHERE "{self.headers[0]}" = %s'
