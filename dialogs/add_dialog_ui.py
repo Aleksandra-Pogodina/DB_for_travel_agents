@@ -45,7 +45,7 @@ class Ui_dialog(object):
 "    padding: 15px;")
         self.formLayoutWidget = QWidget(self.widget_dialog)
         self.formLayoutWidget.setObjectName(u"formLayoutWidget")
-        self.formLayoutWidget.setGeometry(QRect(40, 30, 701, 361))
+        self.formLayoutWidget.setGeometry(QRect(0, 0, 771, 431))
         self.formLayout_dialog = QFormLayout(self.formLayoutWidget)
         self.formLayout_dialog.setObjectName(u"formLayout_dialog")
         self.formLayout_dialog.setContentsMargins(0, 0, 0, 0)

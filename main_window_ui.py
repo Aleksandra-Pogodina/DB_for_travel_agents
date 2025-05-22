@@ -143,7 +143,7 @@ class Ui_MainWindow(object):
         self.comboBox_report.addItem("")
         self.comboBox_report.addItem("")
         self.comboBox_report.setObjectName(u"comboBox_report")
-        self.comboBox_report.setGeometry(QRect(40, 110, 631, 51))
+        self.comboBox_report.setGeometry(QRect(40, 100, 631, 61))
         self.comboBox_report.setStyleSheet(u"background-color: rgba(0, 0, 0, 0.6);           /* \u0437\u0430\u0442\u0435\u043c\u043d\u0451\u043d\u043d\u044b\u0439 \u043f\u043e\u043b\u0443\u043f\u0440\u043e\u0437\u0440\u0430\u0447\u043d\u044b\u0439 \u0444\u043e\u043d */\n"
 "    border: 1px solid rgba(255, 255, 255, 0.8);     /* \u0442\u043e\u043d\u043a\u0430\u044f, \u043d\u043e \u0447\u0451\u0442\u043a\u0430\u044f \u0440\u0430\u043c\u043a\u0430 */\n"
 "    border-radius: 12px;\n"

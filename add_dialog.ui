@@ -45,10 +45,10 @@
    <widget class="QWidget" name="formLayoutWidget">
     <property name="geometry">
      <rect>
-      <x>40</x>
-      <y>30</y>
-      <width>701</width>
-      <height>361</height>
+      <x>0</x>
+      <y>0</y>
+      <width>771</width>
+      <height>431</height>
      </rect>
     </property>
     <layout class="QFormLayout" name="formLayout_dialog"/>
