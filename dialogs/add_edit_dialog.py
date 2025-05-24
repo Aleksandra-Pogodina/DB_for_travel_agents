@@ -2,6 +2,7 @@ from PySide6.QtWidgets import QDialog, QMessageBox, QLineEdit, QComboBox
 from PySide6.QtGui import QRegularExpressionValidator
 from PySide6.QtCore import QRegularExpression
 from datetime import datetime
+from decimal import Decimal
 from .add_dialog_ui import Ui_dialog  # Ваш сгенерированный UI из add_dialog.ui
 
 class AddEditDialog(QDialog):
@@ -16,17 +17,27 @@ class AddEditDialog(QDialog):
 
         self.fields = {}
 
-        # Загрузим данные отелей с городом и страной для автозаполнения
+        # Загрузим данные отелей с городом, страной и ценой для автозаполнения
         self.hotels_data = {}
         try:
             with self.conn.cursor() as cur:
-                cur.execute('SELECT id_отеля, город, страна FROM Отели')
-                for id_val, city, country in cur.fetchall():
-                    self.hotels_data[id_val] = {"город": city, "страна": country}
+                cur.execute('SELECT id_отеля, город, страна, цена FROM Отели')
+                for id_val, city, country, price in cur.fetchall():
+                    self.hotels_data[id_val] = {"город": city, "страна": country, "цена": price}
         except Exception as e:
-            QMessageBox.warning(self, "Внимание", f"Не удалось загрузить данные отелей для автозаполнения:\n{e}")
+            QMessageBox.warning(self, "Внимание", f"Не удалось загрузить данные отелей:\n{e}")
 
-        # Словарь внешних ключей: поле -> (таблица, id_столбец, отображаемый_столбец)
+        # Загрузим цены перевозчиков
+        self.carriers_price = {}
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute('SELECT id_перевозчика, цена FROM Перевозчики')
+                for id_val, price in cur.fetchall():
+                    self.carriers_price[id_val] = price
+        except Exception as e:
+            QMessageBox.warning(self, "Внимание", f"Не удалось загрузить данные перевозчиков:\n{e}")
+
+        # Внешние ключи
         foreign_keys = {
             "id_отеля": ("Отели", "id_отеля", "название"),
             "id_должности": ("Должности", "id_должности", "название_должности"),
@@ -188,8 +199,68 @@ class AddEditDialog(QDialog):
             return text
         return widget
 
+    def calculate_tour_price(self, id_тура):
+        """Вычисляет стоимость тура по формуле и возвращает число или None."""
+        try:
+            with self.conn.cursor() as cur:
+                # Получаем данные тура: продолжительность, id_отеля, id_перевозчика
+                cur.execute('SELECT продолжительность_дней, id_отеля, id_перевозчика FROM Туры WHERE id_тура = %s', (id_тура,))
+                row = cur.fetchone()
+                if not row:
+                    return None
+                duration, id_отеля, id_перевозчика = row
+
+                # Цена отеля
+                price_hotel = Decimal('0')
+                if id_отеля is not None:
+                    cur.execute('SELECT цена FROM Отели WHERE id_отеля = %s', (id_отеля,))
+                    res = cur.fetchone()
+                    if res and res[0] is not None:
+                        price_hotel = Decimal(res[0])
+
+                # Цена перевозчика
+                price_carrier = Decimal('0')
+                if id_перевозчика is not None:
+                    cur.execute('SELECT цена FROM Перевозчики WHERE id_перевозчика = %s', (id_перевозчика,))
+                    res = cur.fetchone()
+                    if res and res[0] is not None:
+                        price_carrier = Decimal(res[0])
+
+                # Сумма цен экскурсий в туре
+                cur.execute('''
+                    SELECT COALESCE(SUM(Экскурсии.цена), 0)
+                    FROM Экскурсии_Туры
+                    JOIN Экскурсии ON Экскурсии_Туры.id_экскурсии = Экскурсии.id_экскурсии
+                    WHERE Экскурсии_Туры.id_тура = %s
+                ''', (id_тура,))
+                price_excursions_raw = cur.fetchone()[0]
+                price_excursions = Decimal(price_excursions_raw) if price_excursions_raw is not None else Decimal('0')
+
+                duration_dec = Decimal(duration) if duration is not None else Decimal('0')
+
+                total_price = (price_hotel * duration_dec) + price_carrier + price_excursions
+                total_price *= Decimal('1.2')  # +20%
+
+                return round(total_price, 2)
+        except Exception as e:
+            QMessageBox.warning(self, "Ошибка", f"Ошибка при вычислении стоимости тура:\n{e}")
+            return None
+
+    def recalc_and_update_tour_price(self, id_тура):
+        """Пересчитывает и обновляет цену тура в базе."""
+        price = self.calculate_tour_price(id_тура)
+        if price is not None:
+            try:
+                with self.conn.cursor() as cur:
+                    cur.execute('UPDATE "Туры" SET цена = %s WHERE id_тура = %s', (price, id_тура))
+                self.conn.commit()
+            except Exception as e:
+                self.conn.rollback()
+                QMessageBox.warning(self, "Ошибка", f"Ошибка при обновлении цены тура:\n{e}")
+
     def save_data(self):
         try:
+            # Проверки для Договоры_клиенты
             if self.table_name == "Договоры_клиенты":
                 дата_оплаты_widget = self.fields.get("дата_оплаты")
                 статус_оплаты_widget = self.fields.get("статус_оплаты")
@@ -207,12 +278,10 @@ class AddEditDialog(QDialog):
                     elif isinstance(статус_оплаты_widget, QLineEdit):
                         статус_оплаты = статус_оплаты_widget.text().lower() in ("true", "1", "да", "истина", "yes")
 
-                # Проверка: если дата_оплаты указана, статус_оплаты должен быть True
                 if дата_оплаты is not None and not статус_оплаты:
                     QMessageBox.critical(self, "Ошибка", "Если дата оплаты указана, статус оплаты должен быть True.")
                     return
 
-                # Проверка: если дата_оплаты отсутствует, статус_оплаты не может быть True
                 if дата_оплаты is None and статус_оплаты:
                     QMessageBox.critical(self, "Ошибка", "Если дата оплаты не указана, статус оплаты не может быть True.")
                     return
@@ -231,61 +300,181 @@ class AddEditDialog(QDialog):
                         if dt_оплаты <= dt_подписания:
                             QMessageBox.critical(self, "Ошибка", "Дата оплаты должна быть позже даты подписания.")
                             return
-                        дата_оплаты_iso = dt_оплаты.date().isoformat()
-                        дата_подписания_iso = dt_подписания.date().isoformat()
                     except ValueError as e:
-                        QMessageBox.critical(self, "Ошибка", f"Ошибка при обработке дат: {e}")
+                        QMessageBox.critical(self, "Ошибка", f"Ошибка при проверке дат: {e}")
                         return
-                else:
-                    дата_оплаты_iso = None
-                    дата_подписания_iso = None
 
             with self.conn.cursor() as cur:
-                if self.table_name == "Туры" and "id_отеля" in self.fields:
-                    hotel_id = None
-                    widget = self.fields.get("id_отеля")
-                    if isinstance(widget, QComboBox):
-                        hotel_id = widget.currentData()
-                    if hotel_id in self.hotels_data:
-                        hotel_city = self.hotels_data[hotel_id]["город"]
-                        hotel_country = self.hotels_data[hotel_id]["страна"]
-                        if "город" in self.fields and isinstance(self.fields["город"], QLineEdit):
-                            self.fields["город"].setText(hotel_city)
-                        if "страна" in self.fields and isinstance(self.fields["страна"], QLineEdit):
-                            self.fields["страна"].setText(hotel_country)
+                if self.table_name == "Туры":
+                    id_тура = None
+                    columns = []
+                    values = []
 
-                if self.record:
-                    set_clause = ", ".join([f'"{h}" = %s' for h in self.fields.keys()])
-                    query = f'UPDATE "{self.table_name}" SET {set_clause} WHERE "{self.headers[0]}" = %s'
-                    values = []
                     for h in self.fields:
-                        if self.table_name == "Договоры_клиенты":
-                            if h == "дата_оплаты":
-                                values.append(дата_оплаты_iso)
-                                continue
-                            if h == "дата_подписания":
-                                values.append(дата_подписания_iso)
-                                continue
+                        if h == "цена":
+                            continue  # Цена будет добавлена после расчёта
                         widget = self.fields[h]
-                        values.append(self._get_field_value(widget, h))
-                    values.append(self.record[0])
-                    cur.execute(query, values)
+                        val = self._get_field_value(widget, h)
+                        columns.append(f'"{h}"')
+                        values.append(val)
+
+                    if self.record:
+                        id_тура = self.record[0]
+                        set_clause = ", ".join([f'"{h}" = %s' for h in self.fields.keys() if h != "цена"])
+                        query = f'UPDATE "{self.table_name}" SET {set_clause} WHERE "{self.headers[0]}" = %s'
+                        cur.execute(query, values + [id_тура])
+                    else:
+                        placeholders = ", ".join(["%s"] * len(values))
+                        query = f'INSERT INTO "{self.table_name}" ({", ".join(columns)}) VALUES ({placeholders}) RETURNING "{self.headers[0]}"'
+                        cur.execute(query, values)
+                        id_тура = cur.fetchone()[0]
+
+                    # Рассчитываем цену тура и обновляем
+                    self.recalc_and_update_tour_price(id_тура)
+
+                elif self.table_name == "Экскурсии_Туры":
+                    # Сохраняем запись
+                    if self.record:
+                        set_clause = ", ".join([f'"{h}" = %s' for h in self.fields.keys()])
+                        query = f'UPDATE "{self.table_name}" SET {set_clause} WHERE "{self.headers[0]}" = %s'
+                        values = []
+                        for h in self.fields:
+                            widget = self.fields[h]
+                            values.append(self._get_field_value(widget, h))
+                        values.append(self.record[0])
+                        cur.execute(query, values)
+                    else:
+                        columns = ", ".join([f'"{h}"' for h in self.fields.keys()])
+                        placeholders = ", ".join(["%s"] * len(self.fields))
+                        query = f'INSERT INTO "{self.table_name}" ({columns}) VALUES ({placeholders})'
+                        values = []
+                        for h in self.fields:
+                            widget = self.fields[h]
+                            values.append(self._get_field_value(widget, h))
+                        cur.execute(query, values)
+
+                    # Получаем id_тура из формы и пересчитываем цену
+                    id_тура = None
+                    if "id_тура" in self.fields:
+                        id_тура = self.fields["id_тура"].currentData()
+                    if id_тура:
+                        self.recalc_and_update_tour_price(id_тура)
+
+                elif self.table_name == "Экскурсии":
+                    # Сохраняем запись
+                    if self.record:
+                        set_clause = ", ".join([f'"{h}" = %s' for h in self.fields.keys()])
+                        query = f'UPDATE "{self.table_name}" SET {set_clause} WHERE "{self.headers[0]}" = %s'
+                        values = []
+                        for h in self.fields:
+                            widget = self.fields[h]
+                            values.append(self._get_field_value(widget, h))
+                        values.append(self.record[0])
+                        cur.execute(query, values)
+                    else:
+                        columns = ", ".join([f'"{h}"' for h in self.fields.keys()])
+                        placeholders = ", ".join(["%s"] * len(self.fields))
+                        query = f'INSERT INTO "{self.table_name}" ({columns}) VALUES ({placeholders})'
+                        values = []
+                        for h in self.fields:
+                            widget = self.fields[h]
+                            values.append(self._get_field_value(widget, h))
+                        cur.execute(query, values)
+
+                    # Получаем все id туров, в которых есть эта экскурсия, и пересчитываем цены
+                    id_экскурсии = self.record[0] if self.record else None
+                    if id_экскурсии is None:
+                        # Если новая запись, получим id из RETURNING
+                        id_экскурсии = cur.fetchone()[0]
+
+                    cur.execute('SELECT DISTINCT id_тура FROM Экскурсии_Туры WHERE id_экскурсии = %s', (id_экскурсии,))
+                    tours = cur.fetchall()
+                    for (id_тура,) in tours:
+                        self.recalc_and_update_tour_price(id_тура)
+
+                elif self.table_name == "Перевозчики":
+                    # Сохраняем запись
+                    if self.record:
+                        set_clause = ", ".join([f'"{h}" = %s' for h in self.fields.keys()])
+                        query = f'UPDATE "{self.table_name}" SET {set_clause} WHERE "{self.headers[0]}" = %s'
+                        values = []
+                        for h in self.fields:
+                            widget = self.fields[h]
+                            values.append(self._get_field_value(widget, h))
+                        values.append(self.record[0])
+                        cur.execute(query, values)
+                    else:
+                        columns = ", ".join([f'"{h}"' for h in self.fields.keys()])
+                        placeholders = ", ".join(["%s"] * len(self.fields))
+                        query = f'INSERT INTO "{self.table_name}" ({columns}) VALUES ({placeholders})'
+                        values = []
+                        for h in self.fields:
+                            widget = self.fields[h]
+                            values.append(self._get_field_value(widget, h))
+                        cur.execute(query, values)
+
+                    # Пересчитываем цены туров с этим перевозчиком
+                    id_перевозчика = self.record[0] if self.record else None
+                    if id_перевозчика is None:
+                        id_перевозчика = cur.fetchone()[0]
+
+                    cur.execute('SELECT id_тура FROM Туры WHERE id_перевозчика = %s', (id_перевозчика,))
+                    tours = cur.fetchall()
+                    for (id_тура,) in tours:
+                        self.recalc_and_update_tour_price(id_тура)
+
+                elif self.table_name == "Отели":
+                    # Сохраняем запись
+                    if self.record:
+                        set_clause = ", ".join([f'"{h}" = %s' for h in self.fields.keys()])
+                        query = f'UPDATE "{self.table_name}" SET {set_clause} WHERE "{self.headers[0]}" = %s'
+                        values = []
+                        for h in self.fields:
+                            widget = self.fields[h]
+                            values.append(self._get_field_value(widget, h))
+                        values.append(self.record[0])
+                        cur.execute(query, values)
+                    else:
+                        columns = ", ".join([f'"{h}"' for h in self.fields.keys()])
+                        placeholders = ", ".join(["%s"] * len(self.fields))
+                        query = f'INSERT INTO "{self.table_name}" ({columns}) VALUES ({placeholders})'
+                        values = []
+                        for h in self.fields:
+                            widget = self.fields[h]
+                            values.append(self._get_field_value(widget, h))
+                        cur.execute(query, values)
+
+                    # Пересчитываем цены туров с этим отелем
+                    id_отеля = self.record[0] if self.record else None
+                    if id_отеля is None:
+                        id_отеля = cur.fetchone()[0]
+
+                    cur.execute('SELECT id_тура FROM Туры WHERE id_отеля = %s', (id_отеля,))
+                    tours = cur.fetchall()
+                    for (id_тура,) in tours:
+                        self.recalc_and_update_tour_price(id_тура)
+
                 else:
-                    columns = ", ".join([f'"{h}"' for h in self.fields.keys()])
-                    placeholders = ", ".join(["%s"] * len(self.fields))
-                    query = f'INSERT INTO "{self.table_name}" ({columns}) VALUES ({placeholders})'
-                    values = []
-                    for h in self.fields:
-                        if self.table_name == "Договоры_клиенты":
-                            if h == "дата_оплаты":
-                                values.append(дата_оплаты_iso)
-                                continue
-                            if h == "дата_подписания":
-                                values.append(дата_подписания_iso)
-                                continue
-                        widget = self.fields[h]
-                        values.append(self._get_field_value(widget, h))
-                    cur.execute(query, values)
+                    # Для остальных таблиц обычное сохранение
+                    if self.record:
+                        set_clause = ", ".join([f'"{h}" = %s' for h in self.fields.keys()])
+                        query = f'UPDATE "{self.table_name}" SET {set_clause} WHERE "{self.headers[0]}" = %s'
+                        values = []
+                        for h in self.fields:
+                            widget = self.fields[h]
+                            values.append(self._get_field_value(widget, h))
+                        values.append(self.record[0])
+                        cur.execute(query, values)
+                    else:
+                        columns = ", ".join([f'"{h}"' for h in self.fields.keys()])
+                        placeholders = ", ".join(["%s"] * len(self.fields))
+                        query = f'INSERT INTO "{self.table_name}" ({columns}) VALUES ({placeholders})'
+                        values = []
+                        for h in self.fields:
+                            widget = self.fields[h]
+                            values.append(self._get_field_value(widget, h))
+                        cur.execute(query, values)
+
                 self.conn.commit()
             self.accept()
         except Exception as e:
