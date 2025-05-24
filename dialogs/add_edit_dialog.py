@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import QDialog, QMessageBox, QLineEdit, QComboBox
 from PySide6.QtGui import QRegularExpressionValidator
 from PySide6.QtCore import QRegularExpression
+from datetime import datetime
 from .add_dialog_ui import Ui_dialog  # Ваш сгенерированный UI из add_dialog.ui
 
 class AddEditDialog(QDialog):
@@ -91,9 +92,23 @@ class AddEditDialog(QDialog):
                 self.ui.formLayout_dialog.addRow(header, combo)
                 self.fields[header] = combo
 
-                # Если поле id_отеля — подключаем автозаполнение города и страны
                 if header == "id_отеля":
                     combo.currentIndexChanged.connect(self.on_hotel_changed)
+                continue
+
+            # Для поля статус_оплаты добавим подсказку и ограничим ввод (true/false)
+            if header == "статус_оплаты":
+                combo = QComboBox(self)
+                combo.addItem("True", True)
+                combo.addItem("False", False)
+                if record:
+                    current_val = record[i]
+                    index = combo.findData(current_val)
+                    if index >= 0:
+                        combo.setCurrentIndex(index)
+                combo.setToolTip("Выберите True, если оплата произведена, иначе False")
+                self.ui.formLayout_dialog.addRow(header, combo)
+                self.fields[header] = combo
                 continue
 
             # Валидаторы для других полей
@@ -104,16 +119,23 @@ class AddEditDialog(QDialog):
             if placeholder:
                 line_edit.setPlaceholderText(placeholder)
             if record:
-                value = str(record[i]) if record[i] is not None else ""
+                value = record[i]
+                # Если поле дата, преобразуем из ISO в ДД ММ ГГГГ для отображения
+                if value is not None and ("дата" in header.lower()):
+                    try:
+                        dt = datetime.strptime(str(value), "%Y-%m-%d")
+                        value = dt.strftime("%d %m %Y")
+                    except ValueError:
+                        value = str(value)
+                else:
+                    value = str(value) if value is not None else ""
                 line_edit.setText(value)
             self.ui.formLayout_dialog.addRow(header, line_edit)
             self.fields[header] = line_edit
 
-        # Сохраняем ссылки на поля город и страна, если они есть
         self.city_field = self.fields.get("город")
         self.country_field = self.fields.get("страна")
 
-        # Если редактируем тур и уже выбран отель — сразу автозаполняем
         if self.table_name == "Туры" and record and "id_отеля" in self.fields:
             hotel_combo = self.fields["id_отеля"]
             current_id = hotel_combo.currentData()
@@ -156,18 +178,80 @@ class AddEditDialog(QDialog):
         else:
             return None, None
 
+    def _get_field_value(self, widget, field_name=None):
+        if isinstance(widget, QComboBox):
+            return widget.currentData()
+        elif isinstance(widget, QLineEdit):
+            text = widget.text().strip()
+            if field_name and ("дата" in field_name.lower() or "date" in field_name.lower()):
+                return text if text else None
+            return text
+        return widget
+
     def save_data(self):
         try:
+            if self.table_name == "Договоры_клиенты":
+                дата_оплаты_widget = self.fields.get("дата_оплаты")
+                статус_оплаты_widget = self.fields.get("статус_оплаты")
+
+                дата_оплаты = None
+                if isinstance(дата_оплаты_widget, QLineEdit):
+                    дата_оплаты = дата_оплаты_widget.text().strip()
+                    if дата_оплаты == "":
+                        дата_оплаты = None
+
+                статус_оплаты = None
+                if статус_оплаты_widget:
+                    if isinstance(статус_оплаты_widget, QComboBox):
+                        статус_оплаты = статус_оплаты_widget.currentData()
+                    elif isinstance(статус_оплаты_widget, QLineEdit):
+                        статус_оплаты = статус_оплаты_widget.text().lower() in ("true", "1", "да", "истина", "yes")
+
+                # Проверка: если дата_оплаты указана, статус_оплаты должен быть True
+                if дата_оплаты is not None and not статус_оплаты:
+                    QMessageBox.critical(self, "Ошибка", "Если дата оплаты указана, статус оплаты должен быть True.")
+                    return
+
+                # Проверка: если дата_оплаты отсутствует, статус_оплаты не может быть True
+                if дата_оплаты is None and статус_оплаты:
+                    QMessageBox.critical(self, "Ошибка", "Если дата оплаты не указана, статус оплаты не может быть True.")
+                    return
+
+                дата_подписания_widget = self.fields.get("дата_подписания")
+                дата_подписания = None
+                if isinstance(дата_подписания_widget, QLineEdit):
+                    дата_подписания = дата_подписания_widget.text().strip()
+                    if дата_подписания == "":
+                        дата_подписания = None
+
+                if дата_оплаты and дата_подписания:
+                    try:
+                        dt_оплаты = datetime.strptime(дата_оплаты, "%d %m %Y")
+                        dt_подписания = datetime.strptime(дата_подписания, "%d %m %Y")
+                        if dt_оплаты <= dt_подписания:
+                            QMessageBox.critical(self, "Ошибка", "Дата оплаты должна быть позже даты подписания.")
+                            return
+                        дата_оплаты_iso = dt_оплаты.date().isoformat()
+                        дата_подписания_iso = dt_подписания.date().isoformat()
+                    except ValueError as e:
+                        QMessageBox.critical(self, "Ошибка", f"Ошибка при обработке дат: {e}")
+                        return
+                else:
+                    дата_оплаты_iso = None
+                    дата_подписания_iso = None
+
             with self.conn.cursor() as cur:
-                # Автозаполнение города и страны перед сохранением (если тур)
                 if self.table_name == "Туры" and "id_отеля" in self.fields:
-                    hotel_id = self.fields["id_отеля"].currentData()
+                    hotel_id = None
+                    widget = self.fields.get("id_отеля")
+                    if isinstance(widget, QComboBox):
+                        hotel_id = widget.currentData()
                     if hotel_id in self.hotels_data:
                         hotel_city = self.hotels_data[hotel_id]["город"]
                         hotel_country = self.hotels_data[hotel_id]["страна"]
-                        if "город" in self.fields:
+                        if "город" in self.fields and isinstance(self.fields["город"], QLineEdit):
                             self.fields["город"].setText(hotel_city)
-                        if "страна" in self.fields:
+                        if "страна" in self.fields and isinstance(self.fields["страна"], QLineEdit):
                             self.fields["страна"].setText(hotel_country)
 
                 if self.record:
@@ -175,12 +259,15 @@ class AddEditDialog(QDialog):
                     query = f'UPDATE "{self.table_name}" SET {set_clause} WHERE "{self.headers[0]}" = %s'
                     values = []
                     for h in self.fields:
+                        if self.table_name == "Договоры_клиенты":
+                            if h == "дата_оплаты":
+                                values.append(дата_оплаты_iso)
+                                continue
+                            if h == "дата_подписания":
+                                values.append(дата_подписания_iso)
+                                continue
                         widget = self.fields[h]
-                        if isinstance(widget, QComboBox):
-                            val = widget.currentData()
-                            values.append(val)
-                        else:
-                            values.append(widget.text())
+                        values.append(self._get_field_value(widget, h))
                     values.append(self.record[0])
                     cur.execute(query, values)
                 else:
@@ -189,12 +276,15 @@ class AddEditDialog(QDialog):
                     query = f'INSERT INTO "{self.table_name}" ({columns}) VALUES ({placeholders})'
                     values = []
                     for h in self.fields:
+                        if self.table_name == "Договоры_клиенты":
+                            if h == "дата_оплаты":
+                                values.append(дата_оплаты_iso)
+                                continue
+                            if h == "дата_подписания":
+                                values.append(дата_подписания_iso)
+                                continue
                         widget = self.fields[h]
-                        if isinstance(widget, QComboBox):
-                            val = widget.currentData()
-                            values.append(val)
-                        else:
-                            values.append(widget.text())
+                        values.append(self._get_field_value(widget, h))
                     cur.execute(query, values)
                 self.conn.commit()
             self.accept()

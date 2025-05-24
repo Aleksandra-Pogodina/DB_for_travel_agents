@@ -14,11 +14,6 @@ def create_date_check_triggers(conn):
     END;
     $$ LANGUAGE plpgsql;
 
-    DROP TRIGGER IF EXISTS trg_check_dates_dogovory_klienty ON "Договоры_клиенты";
-    CREATE TRIGGER trg_check_dates_dogovory_klienty
-    BEFORE INSERT OR UPDATE ON "Договоры_клиенты"
-    FOR EACH ROW EXECUTE FUNCTION check_dates_order();
-
     DROP TRIGGER IF EXISTS trg_check_dates_dogovory_partnery_oteli ON "Договоры_партнёры_отели";
     CREATE TRIGGER trg_check_dates_dogovory_partnery_oteli
     BEFORE INSERT OR UPDATE ON "Договоры_партнёры_отели"
@@ -33,6 +28,28 @@ def create_date_check_triggers(conn):
     CREATE TRIGGER trg_check_dates_dogovory_partnery_ekskursii
     BEFORE INSERT OR UPDATE ON "Договоры_партнёры_экскурсии"
     FOR EACH ROW EXECUTE FUNCTION check_dates_order();
+    
+    
+    ------------------------------------------------------------------------------
+
+    CREATE OR REPLACE FUNCTION check_dates_payment()
+    RETURNS trigger AS $$
+    BEGIN
+        -- Проверяем, что дата_оплаты больше даты_подписания, если дата_оплаты указана
+        IF NEW.дата_оплаты IS NOT NULL AND NEW.дата_подписания IS NOT NULL THEN
+            IF NEW.дата_оплаты <= NEW.дата_подписания THEN
+                RAISE EXCEPTION 'Дата оплаты (%) должна быть позже даты подписания (%)', NEW.дата_оплаты, NEW.дата_подписания;
+            END IF;
+        END IF;
+        RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+    
+    DROP TRIGGER IF EXISTS trg_check_dates_dogovory_klienty ON "Договоры_клиенты";
+    CREATE TRIGGER trg_check_dates_dogovory_klienty
+    BEFORE INSERT OR UPDATE ON "Договоры_клиенты"
+    FOR EACH ROW EXECUTE FUNCTION check_dates_payment();
+
     """
 
     with conn.cursor() as cur:
