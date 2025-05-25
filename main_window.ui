@@ -44,7 +44,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>1</number>
+     <number>2</number>
     </property>
     <widget class="QWidget" name="mainpage">
      <widget class="QFrame" name="main_buttons">
@@ -670,6 +670,36 @@ QPushButton:pressed {
          <width>16</width>
          <height>16</height>
         </size>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="lineEdit_search">
+       <property name="geometry">
+        <rect>
+         <x>482</x>
+         <y>100</y>
+         <width>261</width>
+         <height>51</height>
+        </rect>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QLineEdit {
+    background-color: rgba(43, 43, 43, 0.3);
+    color: #f0f0f0;
+    border: 1px solid rgba(240, 240, 240, 0.3);
+    border-radius: 5px;
+    padding: 4px 8px;
+    selection-background-color: rgba(240, 240, 240, 0.4);
+    selection-color: #2b2b2b;
+}
+
+QLineEdit:focus {
+    border: 1px solid #a0a0a0;
+    background-color: rgba(43, 43, 43, 0.5);
+}
+</string>
+       </property>
+       <property name="placeholderText">
+        <string>Поиск по таблице...</string>
        </property>
       </widget>
      </widget>

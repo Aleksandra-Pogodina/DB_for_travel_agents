@@ -16,9 +16,9 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QHBoxLayout,
-    QHeaderView, QLabel, QMainWindow, QPushButton,
-    QSizePolicy, QStackedWidget, QTableView, QVBoxLayout,
-    QWidget)
+    QHeaderView, QLabel, QLineEdit, QMainWindow,
+    QPushButton, QSizePolicy, QStackedWidget, QTableView,
+    QVBoxLayout, QWidget)
 import resourse_rc
 
 class Ui_MainWindow(object):
@@ -387,12 +387,30 @@ class Ui_MainWindow(object):
 "")
         self.btn_back_on_table.setIcon(icon2)
         self.btn_back_on_table.setIconSize(QSize(16, 16))
+        self.lineEdit_search = QLineEdit(self.frame_table)
+        self.lineEdit_search.setObjectName(u"lineEdit_search")
+        self.lineEdit_search.setGeometry(QRect(482, 100, 261, 51))
+        self.lineEdit_search.setStyleSheet(u"QLineEdit {\n"
+"    background-color: rgba(43, 43, 43, 0.3);\n"
+"    color: #f0f0f0;\n"
+"    border: 1px solid rgba(240, 240, 240, 0.3);\n"
+"    border-radius: 5px;\n"
+"    padding: 4px 8px;\n"
+"    selection-background-color: rgba(240, 240, 240, 0.4);\n"
+"    selection-color: #2b2b2b;\n"
+"}\n"
+"\n"
+"QLineEdit:focus {\n"
+"    border: 1px solid #a0a0a0;\n"
+"    background-color: rgba(43, 43, 43, 0.5);\n"
+"}\n"
+"")
         self.pages.addWidget(self.table_page)
         MainWindow.setCentralWidget(self.centralwidget)
 
         self.retranslateUi(MainWindow)
 
-        self.pages.setCurrentIndex(1)
+        self.pages.setCurrentIndex(2)
 
 
         QMetaObject.connectSlotsByName(MainWindow)
@@ -438,5 +456,6 @@ class Ui_MainWindow(object):
 
         self.label_table.setText(QCoreApplication.translate("MainWindow", u"\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0442\u0430\u0431\u043b\u0438\u0446\u0443", None))
         self.btn_back_on_table.setText(QCoreApplication.translate("MainWindow", u"\u043d\u0430\u0437\u0430\u0434", None))
+        self.lineEdit_search.setPlaceholderText(QCoreApplication.translate("MainWindow", u"\u041f\u043e\u0438\u0441\u043a \u043f\u043e \u0442\u0430\u0431\u043b\u0438\u0446\u0435...", None))
     # retranslateUi
 

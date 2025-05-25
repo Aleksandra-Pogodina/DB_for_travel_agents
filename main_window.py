@@ -1,12 +1,12 @@
 from PySide6.QtWidgets import (
-    QMainWindow, QMessageBox, QAbstractItemView, QDialog
+    QMainWindow, QMessageBox, QAbstractItemView, QDialog, QLineEdit
 )
-from PySide6.QtCore import QAbstractTableModel, Qt
+from PySide6.QtCore import QAbstractTableModel, Qt, QSortFilterProxyModel
 from main_window_ui import Ui_MainWindow
 import db
 import reports
 from dialogs.add_edit_dialog import AddEditDialog  # Универсальный диалог
-from PySide6.QtCore import Qt
+
 
 class TableModel(QAbstractTableModel):
     def __init__(self, data, headers):
@@ -65,17 +65,17 @@ class MainWindow(QMainWindow):
 
         # Стиль для заголовков и углового квадрата с прозрачным тёмным фоном и рамкой
         header_style = """
-            QHeaderView::section {
-                background-color: rgba(43, 43, 43, 0.7);  /* тёмный с прозрачностью 70% */
-                color: #f0f0f0;                           /* светлый текст */
-                border: 1px solid #555555;                /* серая рамка */
-                padding: 4px;
-                box-sizing: border-box;
-            }
-            QTableCornerButton {
-                background-color: rgba(43, 43, 43, 0.7);
-                border: 1px solid #555555;
-            }
+        QHeaderView::section {
+            background-color: rgba(43, 43, 43, 0.7);
+            color: #f0f0f0;
+            border: 1px solid #555555;
+            padding: 4px;
+            box-sizing: border-box;
+        }
+        QTableCornerButton {
+            background-color: rgba(43, 43, 43, 0.7);
+            border: 1px solid #555555;
+        }
         """
         self.ui.tableView_table.horizontalHeader().setStyleSheet(header_style)
         self.ui.tableView_table.verticalHeader().setStyleSheet(header_style)
@@ -104,6 +104,7 @@ class MainWindow(QMainWindow):
             "Договоры_партнёры_отели", "Договоры_партнёры_перевозчики",
             "Договоры_партнёры_экскурсии"
         ]
+
         self.ui.comboBox_table.clear()
         self.ui.comboBox_table.addItems(self.table_names)
         self.ui.comboBox_table.currentIndexChanged.connect(self.load_table_data)
@@ -117,6 +118,7 @@ class MainWindow(QMainWindow):
             "Отели с питанием и вместимостью", "Количество договоров по сотрудникам",
             "Клиенты без покупок", "Туры с количеством экскурсий", "Общая выручка по турам"
         ]
+
         self.ui.comboBox_report.clear()
         self.ui.comboBox_report.addItems(self.report_names)
         self.ui.comboBox_report.currentIndexChanged.connect(self.load_report)
@@ -132,12 +134,23 @@ class MainWindow(QMainWindow):
         self.ui.btn_change.clicked.connect(self.edit_record)
         self.ui.btn_delete.clicked.connect(self.delete_record)
 
+        # === Добавлено: Поиск по таблице ===
+        self.proxy_model = QSortFilterProxyModel(self)
+        self.proxy_model.setFilterCaseSensitivity(Qt.CaseInsensitive)
+        self.proxy_model.setFilterKeyColumn(-1)  # Поиск по всем колонкам
+
+        # Устанавливаем прокси-модель в таблицу
+        self.ui.tableView_table.setModel(self.proxy_model)
+
+        # Подключаем сигнал изменения текста в поле поиска к фильтру прокси-модели
+        self.ui.lineEdit_search.textChanged.connect(self.proxy_model.setFilterFixedString)
+        # === Конец добавления поиска ===
+
         # Загрузка данных при старте
         self.ui.comboBox_table.setCurrentIndex(0)
         self.load_table_data(0)
         self.ui.comboBox_report.setCurrentIndex(0)
         self.load_report(0)
-
         self.show_main_page()
 
     def show_main_page(self):
@@ -154,15 +167,19 @@ class MainWindow(QMainWindow):
     def load_table_data(self, index):
         if index < 0 or index >= len(self.table_names):
             return
+
+        self.ui.lineEdit_search.clear()
+
         table_name = self.table_names[index]
         try:
             with self.conn.cursor() as cur:
                 cur.execute(f'SELECT * FROM "{table_name}";')
                 data = cur.fetchall()
                 headers = [desc[0] for desc in cur.description]
-            model = TableModel(data, headers)
-            self.ui.tableView_table.setModel(model)
-            self.ui.tableView_table.resizeColumnsToContents()
+                model = TableModel(data, headers)
+                # Обновляем источник данных прокси-модели
+                self.proxy_model.setSourceModel(model)
+                self.ui.tableView_table.resizeColumnsToContents()
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка загрузки таблицы:\n{e}")
 
@@ -184,8 +201,10 @@ class MainWindow(QMainWindow):
             reports.get_tours_with_excursion_counts,
             reports.get_total_revenue_per_tour,
         ]
+
         if index < 0 or index >= len(report_functions):
             return
+
         func = report_functions[index]
         try:
             data = func(self.conn)
@@ -193,6 +212,7 @@ class MainWindow(QMainWindow):
                 QMessageBox.information(self, "Отчёт", "Данные отсутствуют.")
                 self.ui.tableView_report.setModel(None)
                 return
+
             headers_map = {
                 0: ["ID тура", "Страна", "Город", "Продолжительность (дней)", "Цена", "Отель", "Перевозчик"],
                 1: ["ФИО", "Телефон", "Количество покупок"],
@@ -210,6 +230,7 @@ class MainWindow(QMainWindow):
                 13: ["ID тура", "Страна", "Город", "Количество экскурсий"],
                 14: ["ID тура", "Страна", "Город", "Цена тура", "Цена перевозчика", "Цена отеля", "Сумма экскурсий", "Общая выручка"],
             }
+
             headers = headers_map.get(index, [])
             model = TableModel(data, headers)
             self.ui.tableView_report.setModel(model)
@@ -225,9 +246,9 @@ class MainWindow(QMainWindow):
             headers = model._headers
         else:
             headers = self.get_table_headers(table)
-            if not headers:
-                QMessageBox.warning(self, "Ошибка", "Не удалось получить структуру таблицы для добавления.")
-                return
+        if not headers:
+            QMessageBox.warning(self, "Ошибка", "Не удалось получить структуру таблицы для добавления.")
+            return
         dialog = AddEditDialog(self.conn, table, headers)
         if dialog.exec() == QDialog.Accepted:
             self.load_table_data(table_index)
@@ -269,7 +290,7 @@ class MainWindow(QMainWindow):
             try:
                 with self.conn.cursor() as cur:
                     cur.execute(f'DELETE FROM "{table_name}" WHERE "{model._headers[0]}" = %s;', (id_value,))
-                    self.conn.commit()
+                self.conn.commit()
                 QMessageBox.information(self, "Удалить", "Запись успешно удалена.")
                 self.load_table_data(self.ui.comboBox_table.currentIndex())
             except Exception as e:

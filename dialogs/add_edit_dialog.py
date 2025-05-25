@@ -203,14 +203,12 @@ class AddEditDialog(QDialog):
         """Вычисляет стоимость тура по формуле и возвращает число или None."""
         try:
             with self.conn.cursor() as cur:
-                # Получаем данные тура: продолжительность, id_отеля, id_перевозчика
                 cur.execute('SELECT продолжительность_дней, id_отеля, id_перевозчика FROM Туры WHERE id_тура = %s', (id_тура,))
                 row = cur.fetchone()
                 if not row:
                     return None
                 duration, id_отеля, id_перевозчика = row
 
-                # Цена отеля
                 price_hotel = Decimal('0')
                 if id_отеля is not None:
                     cur.execute('SELECT цена FROM Отели WHERE id_отеля = %s', (id_отеля,))
@@ -218,7 +216,6 @@ class AddEditDialog(QDialog):
                     if res and res[0] is not None:
                         price_hotel = Decimal(res[0])
 
-                # Цена перевозчика
                 price_carrier = Decimal('0')
                 if id_перевозчика is not None:
                     cur.execute('SELECT цена FROM Перевозчики WHERE id_перевозчика = %s', (id_перевозчика,))
@@ -226,7 +223,6 @@ class AddEditDialog(QDialog):
                     if res and res[0] is not None:
                         price_carrier = Decimal(res[0])
 
-                # Сумма цен экскурсий в туре
                 cur.execute('''
                     SELECT COALESCE(SUM(Экскурсии.цена), 0)
                     FROM Экскурсии_Туры
@@ -239,7 +235,7 @@ class AddEditDialog(QDialog):
                 duration_dec = Decimal(duration) if duration is not None else Decimal('0')
 
                 total_price = (price_hotel * duration_dec) + price_carrier + price_excursions
-                total_price *= Decimal('1.2')  # +20%
+                total_price *= Decimal('1.2')
 
                 return round(total_price, 2)
         except Exception as e:
@@ -258,9 +254,24 @@ class AddEditDialog(QDialog):
                 self.conn.rollback()
                 QMessageBox.warning(self, "Ошибка", f"Ошибка при обновлении цены тура:\n{e}")
 
+    def delete_excursion_tour_pair(self, id_тура, id_экскурсии):
+        """Удаляет из Экскурсии_Туры конкретную пару (id_тура, id_экскурсии)."""
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    'DELETE FROM "Экскурсии_Туры" WHERE id_тура = %s AND id_экскурсии = %s',
+                    (id_тура, id_экскурсии)
+                )
+            self.conn.commit()
+            # После удаления пересчитываем цену тура
+            self.recalc_and_update_tour_price(id_тура)
+        except Exception as e:
+            self.conn.rollback()
+            QMessageBox.critical(self, "Ошибка", f"Ошибка при удалении записи:\n{e}")
+
     def save_data(self):
         try:
-            # Проверки для Договоры_клиенты
+            # Проверки для Договоры_клиенты (оставляем как есть)
             if self.table_name == "Договоры_клиенты":
                 дата_оплаты_widget = self.fields.get("дата_оплаты")
                 статус_оплаты_widget = self.fields.get("статус_оплаты")
@@ -312,7 +323,7 @@ class AddEditDialog(QDialog):
 
                     for h in self.fields:
                         if h == "цена":
-                            continue  # Цена будет добавлена после расчёта
+                            continue
                         widget = self.fields[h]
                         val = self._get_field_value(widget, h)
                         columns.append(f'"{h}"')
@@ -329,11 +340,9 @@ class AddEditDialog(QDialog):
                         cur.execute(query, values)
                         id_тура = cur.fetchone()[0]
 
-                    # Рассчитываем цену тура и обновляем
                     self.recalc_and_update_tour_price(id_тура)
 
                 elif self.table_name == "Экскурсии_Туры":
-                    # Сохраняем запись
                     if self.record:
                         set_clause = ", ".join([f'"{h}" = %s' for h in self.fields.keys()])
                         query = f'UPDATE "{self.table_name}" SET {set_clause} WHERE "{self.headers[0]}" = %s'
@@ -353,7 +362,6 @@ class AddEditDialog(QDialog):
                             values.append(self._get_field_value(widget, h))
                         cur.execute(query, values)
 
-                    # Получаем id_тура из формы и пересчитываем цену
                     id_тура = None
                     if "id_тура" in self.fields:
                         id_тура = self.fields["id_тура"].currentData()
@@ -361,7 +369,6 @@ class AddEditDialog(QDialog):
                         self.recalc_and_update_tour_price(id_тура)
 
                 elif self.table_name == "Экскурсии":
-                    # Сохраняем запись
                     if self.record:
                         set_clause = ", ".join([f'"{h}" = %s' for h in self.fields.keys()])
                         query = f'UPDATE "{self.table_name}" SET {set_clause} WHERE "{self.headers[0]}" = %s'
@@ -381,10 +388,8 @@ class AddEditDialog(QDialog):
                             values.append(self._get_field_value(widget, h))
                         cur.execute(query, values)
 
-                    # Получаем все id туров, в которых есть эта экскурсия, и пересчитываем цены
                     id_экскурсии = self.record[0] if self.record else None
                     if id_экскурсии is None:
-                        # Если новая запись, получим id из RETURNING
                         id_экскурсии = cur.fetchone()[0]
 
                     cur.execute('SELECT DISTINCT id_тура FROM Экскурсии_Туры WHERE id_экскурсии = %s', (id_экскурсии,))
@@ -393,7 +398,6 @@ class AddEditDialog(QDialog):
                         self.recalc_and_update_tour_price(id_тура)
 
                 elif self.table_name == "Перевозчики":
-                    # Сохраняем запись
                     if self.record:
                         set_clause = ", ".join([f'"{h}" = %s' for h in self.fields.keys()])
                         query = f'UPDATE "{self.table_name}" SET {set_clause} WHERE "{self.headers[0]}" = %s'
@@ -413,7 +417,6 @@ class AddEditDialog(QDialog):
                             values.append(self._get_field_value(widget, h))
                         cur.execute(query, values)
 
-                    # Пересчитываем цены туров с этим перевозчиком
                     id_перевозчика = self.record[0] if self.record else None
                     if id_перевозчика is None:
                         id_перевозчика = cur.fetchone()[0]
@@ -424,7 +427,6 @@ class AddEditDialog(QDialog):
                         self.recalc_and_update_tour_price(id_тура)
 
                 elif self.table_name == "Отели":
-                    # Сохраняем запись
                     if self.record:
                         set_clause = ", ".join([f'"{h}" = %s' for h in self.fields.keys()])
                         query = f'UPDATE "{self.table_name}" SET {set_clause} WHERE "{self.headers[0]}" = %s'
@@ -444,7 +446,6 @@ class AddEditDialog(QDialog):
                             values.append(self._get_field_value(widget, h))
                         cur.execute(query, values)
 
-                    # Пересчитываем цены туров с этим отелем
                     id_отеля = self.record[0] if self.record else None
                     if id_отеля is None:
                         id_отеля = cur.fetchone()[0]
@@ -455,7 +456,6 @@ class AddEditDialog(QDialog):
                         self.recalc_and_update_tour_price(id_тура)
 
                 else:
-                    # Для остальных таблиц обычное сохранение
                     if self.record:
                         set_clause = ", ".join([f'"{h}" = %s' for h in self.fields.keys()])
                         query = f'UPDATE "{self.table_name}" SET {set_clause} WHERE "{self.headers[0]}" = %s'
