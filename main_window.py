@@ -258,12 +258,21 @@ class MainWindow(QMainWindow):
         if not selection_model.hasSelection():
             QMessageBox.warning(self, "Изменить", "Выберите запись для изменения.")
             return
-        row = selection_model.selectedRows()[0].row()
-        model = self.ui.tableView_table.model()
+
+        # Получаем индекс выбранной строки в прокси-модели
+        proxy_index = selection_model.selectedRows()[0]
+        # Преобразуем индекс в индекс исходной модели
+        source_index = self.proxy_model.mapToSource(proxy_index)
+        row = source_index.row()
+
+        # Получаем исходную модель с данными
+        model = self.proxy_model.sourceModel()
         record = model._data[row]
         headers = model._headers
+
         table_index = self.ui.comboBox_table.currentIndex()
         table = self.table_names[table_index]
+
         dialog = AddEditDialog(self.conn, table, headers, record=record)
         if dialog.exec() == QDialog.Accepted:
             self.load_table_data(table_index)
@@ -273,19 +282,22 @@ class MainWindow(QMainWindow):
         if not selection_model.hasSelection():
             QMessageBox.warning(self, "Удалить", "Выберите запись для удаления.")
             return
-        selected_indexes = selection_model.selectedRows()
-        if not selected_indexes:
-            QMessageBox.warning(self, "Удалить", "Выберите запись для удаления.")
-            return
-        row = selected_indexes[0].row()
-        model = self.ui.tableView_table.model()
-        id_value = model._data[row][0]  # предполагается, что первый столбец — PK
+
+        proxy_index = selection_model.selectedRows()[0]
+        source_index = self.proxy_model.mapToSource(proxy_index)
+        row = source_index.row()
+
+        model = self.proxy_model.sourceModel()
+        id_value = model._data[row][0]  # Предполагается, что первый столбец — PK
+
         table_name = self.table_names[self.ui.comboBox_table.currentIndex()]
+
         reply = QMessageBox.question(
             self, "Удалить",
             f"Вы уверены, что хотите удалить запись с ID = {id_value} из таблицы {table_name}?",
             QMessageBox.Yes | QMessageBox.No
         )
+
         if reply == QMessageBox.Yes:
             try:
                 with self.conn.cursor() as cur:
