@@ -46,9 +46,20 @@ class AddEditDialog(QDialog):
             "id_клиента": ("Клиенты", "id_клиента", "ФИО"),
         }
 
+
         for i, header in enumerate(headers):
             if i == 0 and self.table_name != "Экскурсии_Туры":
-                continue  # Пропускаем первичный ключ для всех таблиц, кроме Экскурсии_Туры
+                continue  # Пропускаем PK
+
+            # --- Новый блок: обработка продолжительности тура ---
+            if header == "продолжительность_дней":
+                line_edit = QLineEdit(self)
+                line_edit.setValidator(QRegularExpressionValidator(QRegularExpression(r"\d+")))
+                if record:
+                    line_edit.setText(str(record[i]))
+                self.ui.formLayout_dialog.addRow(header, line_edit)
+                self.fields[header] = line_edit
+                continue
 
             lname = header.lower()
 
